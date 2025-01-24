@@ -6,6 +6,7 @@
 # Version 0.1
 # 2024-11-29
 
+renv::restore()
 
 # Load Packages -------------------------
 pacman::p_load(
@@ -46,8 +47,17 @@ pacman::p_load(
   # GG Plot Extras
   ggforce,
   
-  shiny
+  shiny,
+  
+  # mapping
+  sf,               # For working with spatial data
+  rnaturalearth,    # For country data
+  rnaturalearthdata,
+  
+  leaflet
 )
+
+renv::snapshot()
 
 source("clean.R")
 source("visualize.R")
@@ -57,26 +67,28 @@ ui <- fluidPage(
   titlePanel("My app"),
   sidebarLayout(
     sidebarPanel(
-      sliderInput("select_age1", label = "Age 1", min = 0, max = 100, value = c(18,65)),
-      sliderInput("select_bmi1", label = "BMI 1", min = 0, max = 100, value = c(15,25)),
-      sliderInput("select_age2", label = "Age 2", min = 0, max = 100, value = c(18,65)),
-      sliderInput("select_bmi2", label = "BMI 2", min = 0, max = 100, value = c(15,25))
+      plotOutput("hist_age"),
+      sliderInput("select_age", label = "Age", min = 0, max = 100, value = c(0,100)),
+      plotOutput("hist_bmi"),
+      sliderInput("select_bmi", label = "BMI", min = 0, max = 100, value = c(0,100)),
     ),
     mainPanel(
-      plotOutput("scatter1"),
-      plotOutput("scatter2")
+      plotOutput("map"),
     )
   )
 )
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-    output$scatter1 <- renderPlot({
-      scatter(linelist, input$select_age1, input$select_bmi1)
-    })
-    output$scatter2 <- renderPlot({
-      scatter(linelist, input$select_age2, input$select_bmi2)
-    })
+  # Reactive function to filter data based on inputs
+  filtered_data <- reactive({
+    filter_data(linelist, input$select_age, input$select_bmi)
+  })
+  
+  # Render the leaflet map
+  output$map <- renderLeaflet({
+    leaflet_map(filtered_data(), input$select_age, input$select_bmi)
+  })
 }
 
 # Run the application 
